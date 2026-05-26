@@ -8,7 +8,7 @@ except ImportError:
     import urllib.request
     import ssl
 
-URL = "https://data.kcg.gov.tw/File/DirectDownload/80bbbbd3-9ee4-4244-98e9-b4c08deda91b"
+URL = "https://data.kcg.gov.tw/File/DirectDownload/7829e6a5-9176-4072-b801-185f33c82095"
 
 
 def fetch_csv_text(url):
