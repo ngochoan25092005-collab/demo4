@@ -49,6 +49,9 @@ def index():
     location = request.form.get("location", "")
     vehicle_type = request.form.get("vehicle_type", "")
 
+    # 取得所有可選地名（行政區）
+    location_options = sorted({item.get('行政區', '') for item in raw_data if item.get('行政區')})
+
     filtered_data = []
     for item in raw_data:
         # 1. 篩選停車形式 (平面/立體)
@@ -77,8 +80,14 @@ def index():
         if type_match and location_match and vehicle_match:
             filtered_data.append(item)
 
-    return render_template("index.html", data=filtered_data, 
-                           parking_type=parking_type, location=location, vehicle_type=vehicle_type)
+    return render_template(
+        "index.html",
+        data=filtered_data,
+        parking_type=parking_type,
+        location=location,
+        vehicle_type=vehicle_type,
+        location_options=location_options,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
