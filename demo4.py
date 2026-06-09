@@ -1,67 +1,84 @@
+from flask import Flask, render_template, request
 import csv
-import sys
 
-try:
-    import requests
-except ImportError:
-    requests = None
-    import urllib.request
-    import ssl
+app = Flask(__name__)
 
-URL = "https://data.kcg.gov.tw/File/DirectDownload/7829e6a5-9176-4072-b801-185f33c82095"
-
-
-def fetch_csv_text(url):
-    if requests:
-        response = requests.get(url, timeout=15, verify=False)
-        response.raise_for_status()
-        content_type = response.headers.get("Content-Type", "")
-        content = response.content
-        return content, content_type
-    else:
-        context = ssl._create_unverified_context()
-        with urllib.request.urlopen(url, timeout=15, context=context) as response:
-            content = response.read()
-            content_type = response.headers.get("Content-Type", "")
-            return content, content_type
-
-
-def main():
+def fetch_data():
+    # Đọc dữ liệu từ file 1.csv cục bộ
+    file_path = r"d:\11242447\demo4\1.csv"
     try:
-        content, content_type = fetch_csv_text(URL)
-    except Exception as exc:
-        print(f"無法擷取資料: {exc}")
-        sys.exit(1)
+        with open(file_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            records = []
+            for row in reader:
+                # Bỏ qua các dòng phụ trong CSV (đánh dấu bằng dấu '-')
+                if row.get('型式') == '-':
+                    continue
 
-    byte_length = len(content)
-    text = content.decode("utf-8-sig")
-    rows = list(csv.reader(text.splitlines()))
+                # Chuẩn hóa tên cột từ 1.csv để khớp với logic xử lý và index.html
+                normalized_row = {
+                    '行政區': row.get('行政區', ''),
+                    '停車場名稱': row.get('場名', ''),
+                    '種類': row.get('型式', ''),
+                    '地址': row.get('位置', ''),
+                    '大車': row.get('大車', '0'),
+                    '小車': row.get('小車', '0'),
+                    '機車': row.get('機車', '0'),
+                    '緯度': row.get('緯度', ''),
+                    '經度': row.get('經度', ''),
+                    '收費標準': row.get('收費標準', ''),
+                    '管理業者': row.get('管理業者', ''),
+                    '聯絡電話': row.get('聯絡電話', ''),
+                    '履約起迄': row.get('履約起迄', '')
+                }
+                records.append(normalized_row)
+                
+            print(f"成功讀取本地資料：共 {len(records)} 筆")
+            return records
 
-    if not rows:
-        print("未找到任何資料。")
-        return
+    except Exception as e:
+        print(f"讀取本地檔案失敗: {e}")
+        return []
 
-    header = rows[0]
-    data_rows = rows[1:]
-    total_rows = len(data_rows)
-    field_count = len(header)
+@app.route("/", methods=["GET", "POST"])
+def index():
+    raw_data = fetch_data()
+    
+    # 取得篩選條件
+    parking_type = request.form.get("parking_type", "")
+    location = request.form.get("location", "")
+    vehicle_type = request.form.get("vehicle_type", "")
 
-    print("==== 讀取結果 ====\n")
-    print(f"目標 URL: {URL}")
-    print(f"Content-Type: {content_type}")
-    print(f"資料長度: {byte_length} bytes\n")
+    filtered_data = []
+    for item in raw_data:
+        # 1. 篩選停車形式 (平面/立體)
+        type_match = True
+        current_type = str(item.get('種類') or '')
+        if parking_type and parking_type not in current_type:
+            type_match = False
+            
+        # 2. 篩選地名 (模糊搜尋名稱或行政區)
+        location_match = True
+        if location:
+            search_target = f"{item['停車場名稱']}{item['行政區']}{item['地址']}"
+            if location not in search_target:
+                location_match = False
+                
+        # 3. 篩選車輛種類 (檢查是否有該車種格位)
+        vehicle_match = True
+        if vehicle_type:
+            try:
+                val = int(item.get(vehicle_type, 0))
+                if val <= 0:
+                    vehicle_match = False
+            except:
+                vehicle_match = False
 
-    print(f"總列數: {total_rows}, 欄位數: {field_count}\n")
+        if type_match and location_match and vehicle_match:
+            filtered_data.append(item)
 
-    if total_rows > 0:
-        first_row = data_rows[0]
-        print("==== 第1筆資料 ====\n")
-        for key, value in zip(header, first_row):
-            value = value.strip()
-            if key == "Description" and not value:
-                value = "無"
-            print(f"{key} : {value}")
-
+    return render_template("index.html", data=filtered_data, 
+                           parking_type=parking_type, location=location, vehicle_type=vehicle_type)
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市停車場資訊查詢</title>
+    <!-- 引用 Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bs-tertiary-bg);
+        }
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(var(--bs-body-bg-rgb), 0.8) !important;
+        }
+        .search-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .table-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            background-color: var(--bs-body-bg);
+        }
+        .table-responsive {
+            max-height: 65vh;
+        }
+        .sticky-thead {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+        .badge-type {
+            font-weight: 500;
+            padding: 0.5em 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <!-- 導航列 -->
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="/">
+                🚗 高雄停車導航
+            </a>
+            <div class="ms-auto">
+                <button class="btn btn-outline-secondary d-flex align-items-center gap-2" id="themeToggle">
+                    <span id="themeIcon">☀️</span>
+                    <span class="d-none d-sm-inline">切換主題</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <h2 class="mb-4 fw-bold">停車資訊查詢</h2>
+
+        <!-- 篩選表單 -->
+        <div class="card search-card p-4 mb-4">
+            <form method="POST" class="row g-3">
+                <div class="col-lg-4">
+                    <label class="form-label fw-semibold">停車形式</label>
+                    <select class="form-select" name="parking_type">
+                        <option value="">全部形式</option>
+                        <option value="平面" {% if parking_type == '平面' %}selected{% endif %}>平面</option>
+                        <option value="立體" {% if parking_type == '立體' %}selected{% endif %}>立體</option>
+                    </select>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label fw-semibold">地名 / 行政區關鍵字</label>
+                    <input type="text" class="form-control" name="location" value="{{ location }}" placeholder="搜尋區名、路名或地標...">
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label fw-semibold">搜尋車種格位</label>
+                    <select class="form-select" name="vehicle_type">
+                        <option value="">全部車種</option>
+                        <option value="大車" {% if vehicle_type == '大車' %}selected{% endif %}>大車</option>
+                        <option value="小車" {% if vehicle_type == '小車' %}selected{% endif %}>小車</option>
+                        <option value="機車" {% if vehicle_type == '機車' %}selected{% endif %}>機車</option>
+                    </select>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-bold">套用篩選</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 資料列表 -->
+        <div class="row g-3">
+            {% for row in data %}
+            <div class="col-12">
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
+                            <div>
+                                <h5 class="card-title mb-1 fw-bold">{{ row['停車場名稱'] }}</h5>
+                                <p class="mb-1 text-muted">{{ row['行政區'] }} · {{ row['地址'] }}</p>
+                                <p class="mb-0 small text-secondary">經緯度：{{ row['緯度'] or '無' }} , {{ row['經度'] or '無' }}</p>
+                            </div>
+                            <div class="text-xl-end">
+                                <span class="badge badge-type {{ 'bg-info-subtle text-info-emphasis' if '立體' in row['種類'] else 'bg-success-subtle text-success-emphasis' }} border">
+                                    {{ row['種類'] or '無種類' }}
+                                </span>
+                                <p class="mb-1 mt-3"><strong>管理業者：</strong>{{ row['管理業者'] or '無' }}</p>
+                                <p class="mb-0"><strong>聯絡電話：</strong>{{ row['聯絡電話'] or '無' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mt-3">
+                            <div class="col">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="text-muted small">大車格位</div>
+                                    <div class="fs-5 fw-semibold text-danger">{{ row['大車'] or '0' }}</div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="text-muted small">小車格位</div>
+                                    <div class="fs-5 fw-semibold text-primary">{{ row['小車'] or '0' }}</div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="text-muted small">機車格位</div>
+                                    <div class="fs-5 fw-semibold text-success">{{ row['機車'] or '0' }}</div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="text-muted small">履約期間</div>
+                                    <div class="fs-6">{{ row['履約起迄'] or '無資料' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <p class="mb-1"><strong>收費標準：</strong>{{ row['收費標準'] or '無資料' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="card text-center border-0 shadow-sm py-5">
+                    <div class="card-body text-muted">
+                        <div class="fs-1 mb-2">🔭</div>
+                        <h5 class="fw-normal">沒有符合條件的停車場資料</h5>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const toggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const htmlElement = document.documentElement;
+
+        toggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            htmlElement.setAttribute('data-bs-theme', newTheme);
+            themeIcon.innerText = newTheme === 'light' ? '☀️' : '🌙';
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // 初始化檢查主題設定
+        window.addEventListener('load', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                htmlElement.setAttribute('data-bs-theme', savedTheme);
+                themeIcon.innerText = savedTheme === 'light' ? '☀️' : '🌙';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+第一次：
+1.原本資料有347筆，目前只讀取到261筆
+
+
+第二次：
+1.發現錯誤：執行 Python 程式時，出現 ModuleNotFoundError: No module named 'flask' 錯誤。
+解決方式：在終端機輸入 pip install flask requests 來安裝缺少的套件。
+
+第3次：
+1.發現錯誤：網頁雖然成功開啟，但表格內顯示的是 </head>, <body>, 正在下載檔案... 等 HTML 標籤。這代表 API 網址給的是一個下載網頁，而不是真正的停車場資料。
+
+第4次：發現錯誤：網頁介面成功顯示，但下方出現「沒有符合條件的資料」，沒有顯示任何停車場。這可能是因為 API 回傳的 JSON 欄位名稱（Key）與 index.html 裡面 JavaScript 讀取的欄位名稱不匹配。
